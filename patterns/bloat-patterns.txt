@@ -1,0 +1,70 @@
+# Bloat Patterns for macOS Dev Audit Tool
+# Format: pattern|category|explanation
+#
+# Categories:
+#   dependencies    - Package manager dependencies (can be reinstalled)
+#   build-cache     - Build system caches
+#   build-output    - Compiled output directories
+#   cache           - General cache directories
+#   package-manager - Package manager caches
+#
+# Add custom patterns below following the same format
+
+# JavaScript/Node.js
+node_modules|dependencies|NPM/Yarn package dependencies - can be reinstalled with npm install
+.npm|package-manager|NPM cache directory
+.yarn|package-manager|Yarn cache directory
+.pnpm-store|package-manager|PNPM package store
+
+# Python
+__pycache__|cache|Python bytecode cache
+.pyc|cache|Python compiled files
+.venv|dependencies|Python virtual environment
+venv|dependencies|Python virtual environment
+.virtualenvs|dependencies|Python virtual environments (virtualenvwrapper)
+.pip|package-manager|Pip cache
+
+# Rust
+target|build-output|Rust/Maven build output directory
+.cargo/registry|package-manager|Cargo package registry cache
+.rustup|package-manager|Rustup toolchain manager
+
+# Go
+go/pkg|package-manager|Go module cache
+
+# Java/JVM
+.gradle|build-cache|Gradle build cache
+.m2|package-manager|Maven local repository
+build|build-output|Generic build output (Gradle, etc.)
+
+# iOS/macOS Development
+DerivedData|build-cache|Xcode derived data - safe to delete
+Pods|dependencies|CocoaPods dependencies
+.cocoapods|package-manager|CocoaPods cache
+
+# Android
+.android|build-cache|Android SDK and AVD data
+
+# Ruby
+vendor/bundle|dependencies|Bundled Ruby gems
+.gem|package-manager|RubyGems cache
+
+# PHP
+vendor|dependencies|Composer dependencies
+
+# .NET
+.nuget|package-manager|NuGet package cache
+bin|build-output|.NET build output
+obj|build-output|.NET intermediate build files
+
+# Docker
+.docker|cache|Docker configuration and cache
+
+# Generic
+dist|build-output|Distribution/build output
+.cache|cache|Generic cache directory
+.tmp|cache|Temporary files
+.temp|cache|Temporary files
+
+# Package manager lock files are NOT bloat (keeping for reference)
+# package-lock.json, yarn.lock, Cargo.lock, etc. are important!
