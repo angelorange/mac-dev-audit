@@ -15,6 +15,114 @@ source "$SCRIPT_DIR/lib/core.sh"
 source "$SCRIPT_DIR/lib/config.sh"
 source "$SCRIPT_DIR/lib/output.sh"
 source "$SCRIPT_DIR/lib/args.sh"
+source "$SCRIPT_DIR/lib/cleanup.sh"
+
+# Run cleanup mode
+run_cleanup() {
+    echo ""
+    echo "${COLOR_CYAN}${COLOR_BOLD}+==================================================================+${COLOR_RESET}"
+    echo "${COLOR_CYAN}${COLOR_BOLD}|              macOS Dev Audit Tool - Cleanup Mode                |${COLOR_RESET}"
+    echo "${COLOR_CYAN}${COLOR_BOLD}+==================================================================+${COLOR_RESET}"
+    echo ""
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo "${COLOR_YELLOW}[DRY-RUN MODE] No files will be deleted.${COLOR_RESET}"
+        echo ""
+    fi
+
+    echo "Scanning for development bloat (threshold: ${THRESHOLD_GB} GB)..."
+    echo ""
+
+    local threshold_bytes
+    threshold_bytes=$(gb_to_bytes "$THRESHOLD_GB")
+
+    # Source config to get bloat patterns
+    local patterns
+    patterns=$(get_bloat_patterns "$SCRIPT_DIR")
+
+    if [[ -z "$patterns" ]]; then
+        echo "${COLOR_RED}Error: No bloat patterns file found.${COLOR_RESET}"
+        return 1
+    fi
+
+    # Reset cleanup state
+    cleanup_reset
+
+    # Process each pattern
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+
+        local pattern category explanation
+        pattern=$(parse_bloat_pattern "$line" 1)
+        category=$(parse_bloat_pattern "$line" 2)
+        explanation=$(parse_bloat_pattern "$line" 3)
+
+        [[ -z "$pattern" ]] && continue
+
+        # Search for pattern in home directory
+        while IFS= read -r found_path; do
+            if [[ -d "$found_path" ]]; then
+                # Check if safe to delete
+                if ! is_safe_to_delete "$found_path"; then
+                    continue
+                fi
+
+                local size_kb
+                size_kb=$(du -sk "$found_path" 2>/dev/null | cut -f1)
+
+                if [[ -n "$size_kb" ]]; then
+                    local size_bytes=$((size_kb * 1024))
+
+                    # Only include items above 50MB
+                    if [[ "$size_bytes" -gt 52428800 ]]; then
+                        cleanup_add_item "$found_path" "$size_bytes" "$category"
+                    fi
+                fi
+            fi
+        done < <(find "$HOME" -maxdepth 5 -type d -name "$pattern" 2>/dev/null)
+    done <<< "$patterns"
+
+    # Also check common cache directories
+    local cache_dirs=(
+        "$HOME/Library/Caches/com.apple.dt.Xcode"
+        "$HOME/Library/Developer/Xcode/DerivedData"
+        "$HOME/Library/Developer/Xcode/Archives"
+        "$HOME/Library/Developer/Xcode/iOS DeviceSupport"
+        "$HOME/Library/Caches/CocoaPods"
+        "$HOME/Library/Caches/org.swift.swiftpm"
+        "$HOME/Library/Caches/Homebrew"
+        "$HOME/.gradle/caches"
+        "$HOME/.npm/_cacache"
+        "$HOME/.cache/pip"
+    )
+
+    for cache_dir in "${cache_dirs[@]}"; do
+        if [[ -d "$cache_dir" ]]; then
+            local size_kb
+            size_kb=$(du -sk "$cache_dir" 2>/dev/null | cut -f1)
+
+            if [[ -n "$size_kb" ]]; then
+                local size_bytes=$((size_kb * 1024))
+
+                if [[ "$size_bytes" -gt 52428800 ]]; then
+                    cleanup_add_item "$cache_dir" "$size_bytes" "cache"
+                fi
+            fi
+        fi
+    done
+
+    # Show preview
+    cleanup_show_preview
+
+    if [[ -z "$CLEANUP_ITEMS" ]]; then
+        return 0
+    fi
+
+    # Confirm and execute
+    if cleanup_confirm "Are you sure you want to delete these items?"; then
+        cleanup_execute
+    fi
+}
 
 # Run all modules and collect output
 run_audit() {
@@ -79,6 +187,12 @@ main() {
 
     # Validate module selection
     validate_modules
+
+    # If clean mode, run cleanup instead of audit
+    if [[ "$CLEAN_MODE" == "true" ]]; then
+        run_cleanup
+        exit $?
+    fi
 
     # If report file specified, capture output
     if [[ -n "$REPORT_FILE" ]]; then

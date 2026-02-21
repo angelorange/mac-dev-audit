@@ -7,6 +7,8 @@ OUTPUT_FORMAT="${OUTPUT_FORMAT:-human}"
 REPORT_FILE=""
 VERBOSE="${VERBOSE:-false}"
 SELECTED_MODULES=""
+CLEAN_MODE="${CLEAN_MODE:-false}"
+DRY_RUN="${DRY_RUN:-false}"
 
 # Show help
 show_help() {
@@ -25,6 +27,8 @@ OPTIONS:
     --verbose           Show detailed output
     --modules <list>    Run specific modules only (comma-separated)
                         Available: disk,memory,processes,directories,bloat
+    --clean             Interactive cleanup mode (delete dev bloat)
+    --dry-run           Preview cleanup without deleting (use with --clean)
 
 EXAMPLES:
     mac-dev-audit                           # Run all diagnostics
@@ -32,6 +36,8 @@ EXAMPLES:
     mac-dev-audit --threshold 2             # Warn for dirs > 2GB
     mac-dev-audit --modules disk,memory     # Run only disk and memory
     mac-dev-audit --report ~/audit.txt      # Save report to file
+    mac-dev-audit --clean                   # Interactive cleanup mode
+    mac-dev-audit --clean --dry-run         # Preview what would be deleted
 
 MODULES:
     disk          Disk usage analysis
@@ -93,6 +99,14 @@ parse_args() {
                 fi
                 SELECTED_MODULES="$2"
                 shift 2
+                ;;
+            --clean)
+                CLEAN_MODE="true"
+                shift
+                ;;
+            --dry-run)
+                DRY_RUN="true"
+                shift
                 ;;
             -*)
                 die "Unknown option: $1. Use --help for usage information."
