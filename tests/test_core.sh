@@ -94,5 +94,23 @@ else
     exit 1
 fi
 
+# Test 10: Clean flag in help
+echo -n "Test 10: --clean flag documented... "
+if $AUDIT --help | grep -q "\-\-clean"; then
+    echo "PASS"
+else
+    echo "FAIL"
+    exit 1
+fi
+
+# Test 11: Dry-run flag in help
+echo -n "Test 11: --dry-run flag documented... "
+if $AUDIT --help | grep -q "\-\-dry-run"; then
+    echo "PASS"
+else
+    echo "FAIL"
+    exit 1
+fi
+
 echo ""
 echo "All tests passed!"
