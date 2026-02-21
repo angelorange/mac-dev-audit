@@ -1,0 +1,103 @@
+#!/bin/bash
+# macOS Dev Audit Tool
+# A professional, modular, stack-agnostic macOS developer diagnostics CLI tool
+#
+# Usage: ./mac-dev-audit [OPTIONS]
+# Run with --help for more information
+
+set -eo pipefail
+
+# Get the directory where this script is located (resolving symlinks)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source core libraries
+source "$SCRIPT_DIR/lib/core.sh"
+source "$SCRIPT_DIR/lib/config.sh"
+source "$SCRIPT_DIR/lib/output.sh"
+source "$SCRIPT_DIR/lib/args.sh"
+
+# Run all modules and collect output
+run_audit() {
+    # Initialize output
+    output_init
+
+    # Print header
+    output_header
+
+    # Load and run modules
+    local modules_run=0
+
+    for module_file in "$SCRIPT_DIR/modules/"*.sh; do
+        if [[ -f "$module_file" ]]; then
+            local module_name
+            module_name=$(basename "$module_file" .sh)
+
+            # Check if module should run
+            if should_run_module "$module_name"; then
+                log_debug "Running module: $module_name"
+
+                # Source the module
+                source "$module_file"
+
+                # Run the module
+                local run_func="module_${module_name}_run"
+                if declare -f "$run_func" > /dev/null; then
+                    if ! "$run_func"; then
+                        log_warn "Module '$module_name' completed with warnings"
+                    fi
+                    modules_run=$((modules_run + 1))
+                else
+                    log_warn "Module '$module_name' does not have a run function"
+                fi
+            fi
+        fi
+    done
+
+    if [[ $modules_run -eq 0 ]]; then
+        die "No modules were run. Check your --modules selection."
+    fi
+
+    # Print footer or JSON output
+    if [[ "$OUTPUT_FORMAT" == "json" ]]; then
+        output_json_final
+    else
+        output_footer
+    fi
+}
+
+# Main function
+main() {
+    # Check we're on macOS
+    check_macos
+    check_macos_version "12.0"
+
+    # Load configuration (layered)
+    load_config "$SCRIPT_DIR"
+
+    # Parse command line arguments (overrides config)
+    parse_args "$@"
+
+    # Validate module selection
+    validate_modules
+
+    # If report file specified, capture output
+    if [[ -n "$REPORT_FILE" ]]; then
+        local output
+        output=$(run_audit 2>&1)
+
+        # Print to stdout
+        echo "$output"
+
+        # Strip ANSI colors for file output
+        local clean_output
+        clean_output=$(echo "$output" | sed 's/\x1b\[[0-9;]*m//g')
+
+        output_to_report "$REPORT_FILE" "$clean_output"
+    else
+        # Run normally
+        run_audit
+    fi
+}
+
+# Run main function
+main "$@"
