@@ -1,6 +1,6 @@
 # macOS Dev Audit Tool
 
-A professional, modular, stack-agnostic macOS developer environment diagnostics CLI tool.
+A modular, stack-agnostic macOS developer environment diagnostics CLI tool. 🚀
 
 ## Features
 
