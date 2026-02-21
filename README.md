@@ -9,6 +9,7 @@ A modular, stack-agnostic macOS developer environment diagnostics CLI tool. 🚀
 - **Process Detection** - Find resource-intensive processes
 - **Large Directory Finder** - Identify space-consuming directories
 - **Dev Bloat Detection** - Find `node_modules`, build caches, and other dev artifacts
+- **Interactive Cleanup** - Safely delete dev bloat with confirmation
 
 ## Installation
 
@@ -50,6 +51,12 @@ mac-dev-audit --threshold 2
 
 # Show verbose output
 mac-dev-audit --verbose
+
+# Interactive cleanup mode
+mac-dev-audit --clean
+
+# Preview cleanup without deleting
+mac-dev-audit --clean --dry-run
 ```
 
 ### Available Modules
@@ -73,6 +80,8 @@ mac-dev-audit --verbose
 | `--report <file>` | Save report to file |
 | `--threshold <GB>` | Size threshold for warnings (default: 1) |
 | `--verbose` | Show detailed output |
+| `--clean` | Interactive cleanup mode |
+| `--dry-run` | Preview cleanup without deleting |
 
 ## Output Formats
 
@@ -162,7 +171,8 @@ mac-dev-audit/
 │   ├── core.sh             # Core utilities
 │   ├── args.sh             # Argument parsing
 │   ├── config.sh           # Configuration
-│   └── output.sh           # Output formatting
+│   ├── output.sh           # Output formatting
+│   └── cleanup.sh          # Cleanup utilities
 ├── modules/
 │   ├── disk.sh             # Disk diagnostics
 │   ├── memory.sh           # Memory diagnostics
@@ -186,7 +196,11 @@ mac-dev-audit/
 
 ## Safety
 
-This tool is **read-only** and does not modify any files. All cleanup recommendations are informational only.
+- **Audit mode** (default) is **read-only** and does not modify any files
+- **Cleanup mode** (`--clean`) requires explicit confirmation before deleting
+- Use `--dry-run` to preview what would be deleted without making changes
+- Only safe patterns are deleted (node_modules, caches, build artifacts)
+- System directories and personal files are protected
 
 ## License
 
